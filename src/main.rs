@@ -6,6 +6,7 @@ mod spotify;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
+use commands::play::PlayMode;
 use spotify::api::SearchType;
 
 #[derive(Parser)]
@@ -114,17 +115,33 @@ fn resolve_search_type(album: bool, artist: bool, playlist: bool) -> SearchType 
     }
 }
 
+fn parse_play_args(args: &[String]) -> (PlayMode, String) {
+    let mut mode = PlayMode::Artist;
+    let mut query_parts = Vec::new();
+
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "-a" => mode = PlayMode::Album,
+            "-s" => mode = PlayMode::Song,
+            _ => query_parts.push(arg.as_str()),
+        }
+    }
+
+    (mode, query_parts.join(" "))
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
         Command::Play(args) => {
-            let query: String = args.join(" ");
+            let (mode, query) = parse_play_args(&args);
             if query.is_empty() {
                 commands::controls::resume()?;
             } else {
-                commands::play::run(&query).await?;
+                commands::play::run(&query, mode).await?;
             }
         }
 

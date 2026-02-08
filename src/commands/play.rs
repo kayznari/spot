@@ -1,10 +1,17 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use console::Style;
 
 use crate::config::Config;
 use crate::spotify::{api, applescript, auth};
 
-pub async fn run(query: &str) -> Result<()> {
+#[derive(Debug, Clone, Copy)]
+pub enum PlayMode {
+    Artist,
+    Album,
+    Song,
+}
+
+pub async fn run(query: &str, mode: PlayMode) -> Result<()> {
     // Check aliases first
     let config = Config::load()?;
     let resolved = config
@@ -16,53 +23,27 @@ pub async fn run(query: &str) -> Result<()> {
 
     let token = auth::get_token(&config).await?;
 
-    // Search tracks, albums, and artists concurrently
-    let (tracks, albums, artists) = tokio::join!(
-        api::search(&token, query, api::SearchType::Track, 5),
-        api::search(&token, query, api::SearchType::Album, 5),
-        api::search(&token, query, api::SearchType::Artist, 5),
-    );
-
-    let tracks = tracks?;
-    let albums = albums?;
-    let artists = artists?;
-
-    let query_lower = query.to_lowercase();
-
-    // Exact artist match → play artist (top songs)
-    if let Some(artist) = artists.first() {
-        if artist.name.to_lowercase() == query_lower {
-            return play_and_print(artist);
+    match mode {
+        PlayMode::Artist => {
+            let results = api::search(&token, query, api::SearchType::Artist, 5).await?;
+            let artist = results.first().ok_or_else(|| anyhow::anyhow!("No artist found for \"{}\"", query))?;
+            play_and_print(artist)
         }
-    }
-
-    // Exact album match → play album + repeat
-    if let Some(album) = albums.first() {
-        if album.name.to_lowercase() == query_lower {
+        PlayMode::Album => {
+            let results = api::search(&token, query, api::SearchType::Album, 5).await?;
+            let album = results.first().ok_or_else(|| anyhow::anyhow!("No album found for \"{}\"", query))?;
             play_and_print(album)?;
             applescript::set_repeat(true)?;
             let dim = Style::new().dim();
             println!("  {} Repeat on", dim.apply_to("🔁"));
-            return Ok(());
+            Ok(())
+        }
+        PlayMode::Song => {
+            let results = api::search(&token, query, api::SearchType::Track, 5).await?;
+            let track = results.first().ok_or_else(|| anyhow::anyhow!("No song found for \"{}\"", query))?;
+            play_and_print(track)
         }
     }
-
-    // Otherwise → play top track
-    if let Some(track) = tracks.first() {
-        return play_and_print(track);
-    }
-
-    // Fallback to whatever we got
-    if let Some(artist) = artists.first() {
-        return play_and_print(artist);
-    }
-    if let Some(album) = albums.first() {
-        play_and_print(album)?;
-        applescript::set_repeat(true)?;
-        return Ok(());
-    }
-
-    bail!("No results found for \"{}\"", query);
 }
 
 fn play_and_print(result: &api::SearchResult) -> Result<()> {
