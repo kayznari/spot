@@ -17,24 +17,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Search and play a track, album, artist, or playlist
-    Play {
-        /// Search query (omit to resume playback)
-        query: Vec<String>,
-
-        /// Search albums
-        #[arg(short = 'a', long)]
-        album: bool,
-
-        /// Search artists
-        #[arg(short = 'r', long)]
-        artist: bool,
-
-        /// Search playlists
-        #[arg(short = 'p', long)]
-        playlist: bool,
-    },
-
     /// Search and display results
     Search {
         /// Search query
@@ -95,6 +77,29 @@ enum Command {
         #[arg(long)]
         status: bool,
     },
+
+    /// Manage aliases (e.g. spot alias white-album "The Beatles")
+    Alias {
+        #[command(subcommand)]
+        action: AliasAction,
+    },
+
+    /// Anything else is treated as a play query
+    #[command(external_subcommand)]
+    Play(Vec<String>),
+}
+
+#[derive(Subcommand)]
+enum AliasAction {
+    /// Add an alias: spot alias add <name> <query>
+    Add {
+        name: String,
+        query: Vec<String>,
+    },
+    /// Remove an alias
+    Rm { name: String },
+    /// List all aliases
+    Ls,
 }
 
 fn resolve_search_type(album: bool, artist: bool, playlist: bool) -> SearchType {
@@ -114,19 +119,13 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Play {
-            query,
-            album,
-            artist,
-            playlist,
-        } => {
-            let search_type = resolve_search_type(album, artist, playlist);
-            let query_str = if query.is_empty() {
-                None
+        Command::Play(args) => {
+            let query: String = args.join(" ");
+            if query.is_empty() {
+                commands::controls::resume()?;
             } else {
-                Some(query.join(" "))
-            };
-            commands::play::run(query_str, search_type).await?;
+                commands::play::run(&query).await?;
+            }
         }
 
         Command::Search {
@@ -153,6 +152,17 @@ async fn main() -> Result<()> {
         Command::Shuffle { state } => commands::controls::shuffle(state)?,
         Command::Repeat { state } => commands::controls::repeat(state)?,
         Command::Auth { status } => commands::auth::run(status).await?,
+        Command::Alias { action } => match action {
+            AliasAction::Add { name, query } => {
+                commands::alias::add(&name, &query.join(" "))?;
+            }
+            AliasAction::Rm { name } => {
+                commands::alias::remove(&name)?;
+            }
+            AliasAction::Ls => {
+                commands::alias::list()?;
+            }
+        },
     }
 
     Ok(())

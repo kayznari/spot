@@ -61,11 +61,11 @@ pub async fn get_token(config: &Config) -> Result<String> {
     let client_id = config
         .client_id
         .as_deref()
-        .context("No client_id configured. Run `spotter auth` to set up credentials.")?;
+        .context("No client_id configured. Run `spot auth` to set up credentials.")?;
     let client_secret = config
         .client_secret
         .as_deref()
-        .context("No client_secret configured. Run `spotter auth` to set up credentials.")?;
+        .context("No client_secret configured. Run `spot auth` to set up credentials.")?;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -79,7 +79,7 @@ pub async fn get_token(config: &Config) -> Result<String> {
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        bail!("Token request failed ({status}): {body}. Check your credentials with `spotter auth`.");
+        bail!("Token request failed ({status}): {body}. Check your credentials with `spot auth`.");
     }
 
     let token_resp: TokenResponse = resp

@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -9,13 +10,15 @@ pub struct Config {
     pub client_id: Option<String>,
     #[serde(default)]
     pub client_secret: Option<String>,
+    #[serde(default)]
+    pub aliases: Option<HashMap<String, String>>,
 }
 
 impl Config {
     pub fn config_dir() -> Result<PathBuf> {
         let dir = dirs::config_dir()
             .context("Could not determine config directory")?
-            .join("spotter");
+            .join("spot");
         Ok(dir)
     }
 
