@@ -1,0 +1,17 @@
+[package]
+name = "spot"
+version = "0.1.0"
+edition = "2021"
+description = "A Spotify CLI for macOS"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+console = "0.15"
+dialoguer = { version = "0.11", features = ["fuzzy-select"] }
+dirs = "5"
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "macros"] }
+toml = "0.8"
