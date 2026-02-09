@@ -116,14 +116,15 @@ fn resolve_search_type(album: bool, artist: bool, playlist: bool) -> SearchType 
 }
 
 fn parse_play_args(args: &[String]) -> (PlayMode, String) {
-    let mut mode = PlayMode::Artist;
+    let mut mode = PlayMode::Track;
     let mut query_parts = Vec::new();
 
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "-a" => mode = PlayMode::Album,
-            "-s" => mode = PlayMode::Song,
+            "-r" => mode = PlayMode::Artist,
+            "-p" => mode = PlayMode::Playlist,
             _ => query_parts.push(arg.as_str()),
         }
     }

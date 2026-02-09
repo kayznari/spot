@@ -6,9 +6,10 @@ use crate::spotify::{api, applescript, auth};
 
 #[derive(Debug, Clone, Copy)]
 pub enum PlayMode {
-    Artist,
+    Track,
     Album,
-    Song,
+    Artist,
+    Playlist,
 }
 
 pub async fn run(query: &str, mode: PlayMode) -> Result<()> {
@@ -24,10 +25,10 @@ pub async fn run(query: &str, mode: PlayMode) -> Result<()> {
     let token = auth::get_token(&config).await?;
 
     match mode {
-        PlayMode::Artist => {
-            let results = api::search(&token, query, api::SearchType::Artist, 5).await?;
-            let artist = results.first().ok_or_else(|| anyhow::anyhow!("No artist found for \"{}\"", query))?;
-            play_and_print(artist)
+        PlayMode::Track => {
+            let results = api::search(&token, query, api::SearchType::Track, 5).await?;
+            let track = results.first().ok_or_else(|| anyhow::anyhow!("No track found for \"{}\"", query))?;
+            play_and_print(track)
         }
         PlayMode::Album => {
             let results = api::search(&token, query, api::SearchType::Album, 5).await?;
@@ -38,10 +39,15 @@ pub async fn run(query: &str, mode: PlayMode) -> Result<()> {
             println!("  {} Repeat on", dim.apply_to("🔁"));
             Ok(())
         }
-        PlayMode::Song => {
-            let results = api::search(&token, query, api::SearchType::Track, 5).await?;
-            let track = results.first().ok_or_else(|| anyhow::anyhow!("No song found for \"{}\"", query))?;
-            play_and_print(track)
+        PlayMode::Artist => {
+            let results = api::search(&token, query, api::SearchType::Artist, 5).await?;
+            let artist = results.first().ok_or_else(|| anyhow::anyhow!("No artist found for \"{}\"", query))?;
+            play_and_print(artist)
+        }
+        PlayMode::Playlist => {
+            let results = api::search(&token, query, api::SearchType::Playlist, 5).await?;
+            let playlist = results.first().ok_or_else(|| anyhow::anyhow!("No playlist found for \"{}\"", query))?;
+            play_and_print(playlist)
         }
     }
 }
