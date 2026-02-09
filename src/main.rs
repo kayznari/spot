@@ -157,7 +157,7 @@ async fn main() -> Result<()> {
             } else if song {
                 PlayMode::Track
             } else {
-                PlayMode::Track
+                PlayMode::Artist
             };
             let query_str = query.join(" ");
             if query_str.is_empty() {
@@ -171,7 +171,7 @@ async fn main() -> Result<()> {
             if query.is_empty() {
                 commands::controls::resume()?;
             } else {
-                commands::play::run(&query, PlayMode::Track).await?;
+                commands::play::run(&query, PlayMode::Artist).await?;
             }
         }
 

@@ -28,7 +28,9 @@ pub async fn run(query: &str, mode: PlayMode) -> Result<()> {
         PlayMode::Track => {
             let results = api::search(&token, query, api::SearchType::Track, 5).await?;
             let track = results.first().ok_or_else(|| anyhow::anyhow!("No track found for \"{}\"", query))?;
-            play_and_print(track)
+            play_and_print(track)?;
+            applescript::set_repeat(false)?;
+            Ok(())
         }
         PlayMode::Album => {
             let results = api::search(&token, query, api::SearchType::Album, 5).await?;
@@ -42,12 +44,16 @@ pub async fn run(query: &str, mode: PlayMode) -> Result<()> {
         PlayMode::Artist => {
             let results = api::search(&token, query, api::SearchType::Artist, 5).await?;
             let artist = results.first().ok_or_else(|| anyhow::anyhow!("No artist found for \"{}\"", query))?;
-            play_and_print(artist)
+            play_and_print(artist)?;
+            applescript::set_repeat(false)?;
+            Ok(())
         }
         PlayMode::Playlist => {
             let results = api::search(&token, query, api::SearchType::Playlist, 5).await?;
             let playlist = results.first().ok_or_else(|| anyhow::anyhow!("No playlist found for \"{}\"", query))?;
-            play_and_print(playlist)
+            play_and_print(playlist)?;
+            applescript::set_repeat(false)?;
+            Ok(())
         }
     }
 }
