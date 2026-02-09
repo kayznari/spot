@@ -85,9 +85,23 @@ enum Command {
         action: AliasAction,
     },
 
+    /// Play a track, album, or artist
+    Play {
+        /// Play as album
+        #[arg(short = 'a')]
+        album: bool,
+
+        /// Play as song/track
+        #[arg(short = 's')]
+        song: bool,
+
+        /// Search query
+        query: Vec<String>,
+    },
+
     /// Anything else is treated as a play query
     #[command(external_subcommand)]
-    Play(Vec<String>),
+    External(Vec<String>),
 }
 
 #[derive(Subcommand)]
@@ -115,34 +129,49 @@ fn resolve_search_type(album: bool, artist: bool, playlist: bool) -> SearchType 
     }
 }
 
-fn parse_play_args(args: &[String]) -> (PlayMode, String) {
-    let mut mode = PlayMode::Track;
-    let mut query_parts = Vec::new();
-
-    let mut iter = args.iter();
-    while let Some(arg) = iter.next() {
-        match arg.as_str() {
-            "-a" => mode = PlayMode::Album,
-            "-r" => mode = PlayMode::Artist,
-            "-p" => mode = PlayMode::Playlist,
-            _ => query_parts.push(arg.as_str()),
+fn preprocess_args() -> Vec<String> {
+    let mut args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "-a" | "-s" => {
+                args.insert(1, "play".to_string());
+            }
+            _ => {}
         }
     }
-
-    (mode, query_parts.join(" "))
+    args
 }
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    let cli = Cli::parse();
+    let cli = Cli::parse_from(preprocess_args());
 
     match cli.command {
-        Command::Play(args) => {
-            let (mode, query) = parse_play_args(&args);
+        Command::Play {
+            album,
+            song,
+            query,
+        } => {
+            let mode = if album {
+                PlayMode::Album
+            } else if song {
+                PlayMode::Track
+            } else {
+                PlayMode::Track
+            };
+            let query_str = query.join(" ");
+            if query_str.is_empty() {
+                commands::controls::resume()?;
+            } else {
+                commands::play::run(&query_str, mode).await?;
+            }
+        }
+        Command::External(args) => {
+            let query = args.join(" ");
             if query.is_empty() {
                 commands::controls::resume()?;
             } else {
-                commands::play::run(&query, mode).await?;
+                commands::play::run(&query, PlayMode::Track).await?;
             }
         }
 
